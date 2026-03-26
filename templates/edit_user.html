@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="container mt-5" style="max-width: 650px;">
+
+    <!-- Page Title -->
+    <div class="text-center mb-4">
+        <div class="d-flex justify-content-center align-items-center mb-2">
+            <i class="bi bi-pencil-square" style="font-size: 36px; color: #0d6efd; margin-right: 10px;"></i>
+            <h2 class="fw-bold" style="font-size: 32px; margin: 0;">Edit User</h2>
+        </div>
+
+        <hr style="width: 55%; margin: 18px auto; border-top: 1px solid #bbb;">
+    </div>
+
+    <!-- Edit User Form -->
+    <form method="POST" class="shadow-sm p-4 bg-white rounded">
+
+        <label class="form-label fw-semibold">Name</label>
+        <input type="text" name="name" value="{{ user.Name }}" class="form-control mb-3" required>
+
+        <label class="form-label fw-semibold">Date of Birth</label>
+        <input type="date" name="dob" value="{{ user.Date_of_birth }}" class="form-control mb-3" required>
+
+        <label class="form-label fw-semibold">Height (cm)</label>
+        <input type="number" name="height" value="{{ user.Height }}" class="form-control mb-3" required>
+
+        <label class="form-label fw-semibold">Weight (kg)</label>
+        <input type="number" name="weight" value="{{ user.Weight }}" class="form-control mb-4" required>
+
+        <button class="btn btn-primary w-100 py-2">
+            <i class="bi bi-check-circle me-1"></i> Save Changes
+        </button>
+    </form>
+
+    <!-- Back Button -->
+    <div class="text-center mt-4">
+        <a href="{{ url_for('users') }}" class="btn btn-outline-secondary">
+            Back to Users
+        </a>
+    </div>
+
+</div>
+
+{% endblock %}

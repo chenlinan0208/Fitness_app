@@ -1,0 +1,122 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="container mt-4">
+
+    <h2 class="mb-4">Create New Workout</h2>
+
+    <form method="POST">
+
+        <!-- User + Date + Duration -->
+        <div class="row mb-3">
+            <div class="col-md-4">
+                <label class="form-label">User</label>
+                <select name="user_id" class="form-select" required>
+                    {% for u in users %}
+                        <option value="{{ u.UserID }}">{{ u.Name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="col-md-4">
+                <label class="form-label">Date</label>
+                <input type="date" name="date" class="form-control" required>
+            </div>
+
+            <div class="col-md-4">
+                <label class="form-label">Duration (minutes)</label>
+                <input type="number" name="duration" class="form-control" required>
+            </div>
+        </div>
+
+        <hr>
+
+        <!-- Exercise Rows -->
+        <h4 class="mb-3">Exercises</h4>
+
+        <div id="exercise-rows">
+
+            <div class="row mb-3 exercise-row">
+                <div class="col-md-4">
+                    <label class="form-label">Exercise</label>
+                    <select name="exercise_id" class="form-select" required>
+                        {% for e in exercises %}
+                            <option value="{{ e.ExerciseID }}">{{ e.Exercise_Name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="col-md-2">
+                    <label class="form-label">Sets</label>
+                    <input type="number" name="sets" class="form-control" required>
+                </div>
+
+                <div class="col-md-2">
+                    <label class="form-label">Reps</label>
+                    <input type="number" name="reps" class="form-control" required>
+                </div>
+
+                <div class="col-md-2">
+                    <label class="form-label">Load</label>
+                    <input type="number" name="load" class="form-control" required>
+                </div>
+
+                <div class="col-md-2 d-flex align-items-end">
+                    <button type="button" class="btn btn-danger remove-row">Remove</button>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Add Exercise Button -->
+        <button type="button" id="add-row" class="btn btn-secondary mb-4">+ Add Exercise</button>
+
+        <br>
+
+        <!-- Submit -->
+        
+        <div class="d-flex justify-content-between mt-4">
+    
+            <!-- Left: Cancel -->
+            <a href="{{ url_for('workouts') }}" class="btn btn-outline-secondary">
+                Cancel
+            </a>
+
+            <!-- Right: Create Workout -->
+            <button type="submit" class="btn btn-primary">
+                Create Workout
+            </button>
+
+        </div>
+
+    </form>
+</div>
+
+<!-- JavaScript to duplicate exercise rows -->
+<script>
+document.getElementById("add-row").addEventListener("click", function () {
+    const container = document.getElementById("exercise-rows");
+    const firstRow = container.querySelector(".exercise-row");
+    const newRow = firstRow.cloneNode(true);
+
+    // Clear inputs
+    newRow.querySelectorAll("input").forEach(i => i.value = "");
+    container.appendChild(newRow);
+
+    // Reattach remove button logic
+    newRow.querySelector(".remove-row").addEventListener("click", function () {
+        if (document.querySelectorAll(".exercise-row").length > 1) {
+            this.closest(".exercise-row").remove();
+        }
+    });
+});
+
+// Attach remove logic to the first row
+document.querySelector(".remove-row").addEventListener("click", function () {
+    if (document.querySelectorAll(".exercise-row").length > 1) {
+        this.closest(".exercise-row").remove();
+    }
+});
+</script>
+
+{% endblock %}
