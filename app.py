@@ -407,6 +407,104 @@ def nutrition_user(user_id):
 
     return render_template("nutrition_user.html", logs=logs, user_id=user_id)
 
+@app.route("/nutrition/<int:user_id>/add", methods=["GET", "POST"])
+def add_nutrition(user_id):
+    if request.method == "POST":
+        date = request.form["date"]
+        try:
+            calorie_intake = int(request.form["calorie_intake"])
+        except (ValueError, TypeError):
+            return "Invalid calorie value", 400
+        macros = request.form["macros"]
+
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        cursor.execute("""
+            INSERT INTO NutritionLog (Date, Calorie_intake, Macros)
+            VALUES (%s, %s, %s)
+        """, (date, calorie_intake, macros))
+        log_id = cursor.lastrowid
+
+        cursor.execute("""
+            INSERT INTO Records (NutritionLogID, UserID)
+            VALUES (%s, %s)
+        """, (log_id, user_id))
+
+        conn.commit()
+        cursor.close()
+        conn.close()
+
+        return redirect(url_for("nutrition_user", user_id=user_id))
+
+    return render_template("add_nutrition.html", user_id=user_id)
+
+@app.route("/nutrition/<int:user_id>/edit/<int:log_id>", methods=["GET", "POST"])
+def edit_nutrition(user_id, log_id):
+    conn = get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+
+    cursor.execute("""
+        SELECT n.NutritionLogID, n.Date, n.Calorie_intake, n.Macros
+        FROM NutritionLog n
+        JOIN Records r ON n.NutritionLogID = r.NutritionLogID
+        WHERE n.NutritionLogID = %s AND r.UserID = %s
+    """, (log_id, user_id))
+    log = cursor.fetchone()
+
+    if not log:
+        cursor.close()
+        conn.close()
+        return "Log not found", 404
+
+    if request.method == "POST":
+        date = request.form["date"]
+        try:
+            calorie_intake = int(request.form["calorie_intake"])
+        except (ValueError, TypeError):
+            cursor.close()
+            conn.close()
+            return "Invalid calorie value", 400
+        macros = request.form["macros"]
+
+        cursor.execute("""
+            UPDATE NutritionLog
+            SET Date=%s, Calorie_intake=%s, Macros=%s
+            WHERE NutritionLogID=%s
+        """, (date, calorie_intake, macros, log_id))
+
+        conn.commit()
+        cursor.close()
+        conn.close()
+
+        return redirect(url_for("nutrition_user", user_id=user_id))
+
+    cursor.close()
+    conn.close()
+    return render_template("edit_nutrition.html", log=log, user_id=user_id)
+
+@app.route("/nutrition/delete/<int:log_id>", methods=["POST"])
+def delete_nutrition(log_id):
+    conn = get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+
+    cursor.execute("SELECT UserID FROM Records WHERE NutritionLogID = %s", (log_id,))
+    row = cursor.fetchone()
+    if not row:
+        cursor.close()
+        conn.close()
+        return "Log not found", 404
+    user_id = row["UserID"]
+
+    cursor.execute("DELETE FROM Records WHERE NutritionLogID = %s AND UserID = %s", (log_id, user_id))
+    cursor.execute("DELETE FROM NutritionLog WHERE NutritionLogID = %s", (log_id,))
+
+    conn.commit()
+    cursor.close()
+    conn.close()
+
+    return redirect(url_for("nutrition_user", user_id=user_id))
+
 @app.route("/workouts")
 def workouts():
     conn = get_db_connection()
