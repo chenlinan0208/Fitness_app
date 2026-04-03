@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container mt-4" style="max-width: 700px;">
+  <h2 class="mb-4">Edit Performance Log</h2>
+
+  <form method="POST">
+    <div class="mb-3">
+      <label class="form-label">Date</label>
+      <input type="date" name="date" class="form-control" value="{{ log.Date }}" required>
+    </div>
+
+    <div class="mb-3">
+      <label class="form-label">Duration (min)</label>
+      <input type="number" name="duration" class="form-control" value="{{ log.Duration }}" required>
+    </div>
+
+    <div class="row">
+      <div class="col-md-4 mb-3">
+        <label class="form-label">Sets</label>
+        <input type="number" id="sets" name="sets" class="form-control" value="{{ log.Sets }}" required>
+      </div>
+      <div class="col-md-4 mb-3">
+        <label class="form-label">Reps</label>
+        <input type="number" id="reps" name="reps" class="form-control" value="{{ log.Reps }}" required>
+      </div>
+      <div class="col-md-4 mb-3">
+        <label class="form-label">Weight (kg)</label>
+        <input type="number" step="0.1" id="load" name="load" class="form-control" value="{{ log.Load }}" required>
+      </div>
+    </div>
+
+    <div class="mb-3">
+      <label class="form-label">Training Volume (auto)</label>
+      <input type="text" id="volume_display" class="form-control" 
+             value="{{ log.Sets * log.Reps * log.Load }}" readonly>
+    </div>
+
+    <div class="d-flex justify-content-between mt-4">
+      <a href="{{ url_for('performance_logs', user_id=log.UserID) }}" class="btn btn-secondary">Cancel</a>
+      <button type="submit" class="btn btn-primary">Save Changes</button>
+    </div>
+  </form>
+
+</div>
+
+<script>
+function updateVolume() {
+  const s = parseFloat(document.getElementById("sets").value) || 0;
+  const r = parseFloat(document.getElementById("reps").value) || 0;
+  const w = parseFloat(document.getElementById("weight").value) || 0;
+  document.getElementById("volume_display").value = s * r * w;
+}
+["sets","reps","weight"].forEach(id => {
+  const el = document.getElementById(id);
+  if (el) el.addEventListener("input", updateVolume);
+});
+</script>
+{% endblock %}

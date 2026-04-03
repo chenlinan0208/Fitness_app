@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="p-4">
+    <h1>Performance Logs</h1>
+
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <a href="{{ url_for('user_detail', user_id=user_id) }}" class="btn btn-secondary">Back to User</a>
+        <a href="{{ url_for('add_performance', user_id=user_id) }}" class="btn btn-primary">Add Log</a>
+    </div>
+
+    <table class="table table-bordered table-striped">
+        <thead class="table-dark">
+            <tr>
+                <th>Log ID</th>
+                <th>Date</th>
+                <th>Duration (min)</th>
+                <th>Exercise</th>
+                <th>Sets</th>
+                <th>Reps</th>
+                <th>Load (kg)</th>
+                <th>Volume</th>
+                <th>Category</th>
+                <th>Equipment</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+
+        <tbody>
+            {% for log in logs %}
+            <tr>
+                <td>{{ log.LogID }}</td>
+                <td>{{ log.Date }}</td>
+                <td>{{ log.Duration }}</td>
+                <td>{{ log.Exercise }}</td>
+                <td>{{ log.Sets }}</td>
+                <td>{{ log.Reps }}</td>
+                <td>{{ log.Load }}</td>
+                <td>{{ log.Volume }}</td>
+                <td>{{ log.Category }}</td>
+                <td>{{ log.Equipment }}</td>
+                <td>
+                    <div class="btn-group">
+                        <a href="{{ url_for('edit_performance', log_id=log.LogID) }}" class="btn btn-sm btn-outline-secondary">Edit</a>
+                        <form action="{{ url_for('delete_performance', log_id=log.LogID) }}" method="POST" style="display:inline;">
+                            <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('Are you sure?')">Delete</button>
+                        </form>
+                    </div>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

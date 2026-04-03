@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="container mt-4">
+
+    <h2 class="mb-3">Workout Details</h2>
+
+    <div class="card mb-4">
+        <div class="card-body">
+            <h5><strong>User ID:</strong> {{ user_id }}</h5>
+            <h5><strong>Date:</strong> {{ date }}</h5>
+        </div>
+    </div>
+
+    <table class="table table-striped table-bordered">
+        <thead class="table-dark">
+            <tr>
+                <th>Exercise</th>
+                <th>Category</th>
+                <th>Sets</th>
+                <th>Reps</th>
+                <th>Load</th>
+                <th>Volume</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for e in entries %}
+            <tr>
+                <td>{{ e.Exercise_Name }}</td>
+                <td>{{ e.Category }}</td>
+                <td>{{ e.Sets }}</td>
+                <td>{{ e.Reps }}</td>
+                <td>{{ e.Load }}</td>
+                <td>{{ e.Sets * e.Reps * e.Load }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <a href="{{ url_for('workouts') }}" class="btn btn-secondary mt-3">
+        ← Back to Workouts
+    </a>
+
+</div>
+
+{% endblock %}
