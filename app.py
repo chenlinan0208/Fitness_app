@@ -101,9 +101,96 @@ def get_category_distribution(user_id):
 
     return rows
 
-@app.route("/")
+# @app.route("/")
+# def home():
+#     return redirect(url_for("global_dashboard"))
+
+@app.route("/home")
 def home():
-    return redirect(url_for("global_dashboard"))
+
+    conn = get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+
+    # --- KPI Cards ---
+    cursor.execute("SELECT COUNT(*) AS total_users FROM User")
+    total_users = cursor.fetchone()["total_users"]
+
+    cursor.execute("SELECT COUNT(*) AS total_workouts FROM PerformanceLog")
+    total_workouts = cursor.fetchone()["total_workouts"]
+
+    cursor.execute("SELECT COUNT(*) AS total_exercises FROM Includes")
+    total_exercises = cursor.fetchone()["total_exercises"]
+
+    cursor.execute("SELECT COUNT(*) AS total_nutrition FROM NutritionLog")
+    total_nutrition = cursor.fetchone()["total_nutrition"]
+
+    # --- Workouts per Week (Line Chart) ---
+    cursor.execute("""
+        SELECT 
+            YEAR(Date) AS year,
+            WEEK(Date) AS week,
+            COUNT(*) AS count
+        FROM PerformanceLog
+        GROUP BY YEAR(Date), WEEK(Date)
+        ORDER BY year, week
+    """)
+    workouts_per_week = cursor.fetchall()
+
+    # --- Category Distribution (Pie Chart) ---
+    cursor.execute("""
+        SELECT 
+            ts.Category,
+            COUNT(*) AS count
+        FROM Training_Session ts
+        JOIN Includes i ON ts.WorkoutId = i.WorkoutId AND ts.ExerciseID = i.ExerciseID
+        GROUP BY ts.Category
+    """)
+    category_distribution = cursor.fetchall()
+
+    # --- Top 5 Active Users ---
+    cursor.execute("""
+        SELECT 
+            u.Name,
+            COUNT(pl.LogID) AS workout_count,
+            SUM(pl.Sets * pl.Reps * pl.Load) AS total_volume
+        FROM PerformanceLog pl
+        JOIN Generates g ON pl.LogID = g.LogID
+        JOIN User u ON g.UserID = u.UserID
+        GROUP BY u.UserID
+        ORDER BY workout_count DESC
+        LIMIT 5
+    """)
+    top_users = cursor.fetchall()
+
+    # --- Recent Activity Feed ---
+    cursor.execute("""
+        SELECT 
+            u.Name,
+            pl.Date,
+            'workout' AS type
+        FROM PerformanceLog pl
+        JOIN Generates g ON pl.LogID = g.LogID
+        JOIN User u ON g.UserID = u.UserID
+        ORDER BY pl.Date DESC
+        LIMIT 8
+    """)
+    recent_activity = cursor.fetchall()
+
+    cursor.close()
+    conn.close()
+
+    return render_template(
+        "home.html",
+        total_users=total_users,
+        total_workouts=total_workouts,
+        total_exercises=total_exercises,
+        total_nutrition=total_nutrition,
+        workouts_per_week=workouts_per_week,
+        category_distribution=category_distribution,
+        top_users=top_users,
+        recent_activity=recent_activity
+    )
+
 
 @app.route("/dashboard")
 def global_dashboard():
@@ -369,18 +456,29 @@ def delete_performance(log_id):
 
     return redirect(url_for("performance_logs", user_id=user_id))
 
-@app.route("/nutrition")
+# -------------------------------------------------------------
+# GLOBAL NUTRITION PAGE (The top navigation link)
+# -------------------------------------------------------------
+@app.route('/nutrition')
 def nutrition():
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
-
-    cursor.execute("SELECT * FROM NutritionLog ORDER BY Date DESC")
-    logs = cursor.fetchall()
-
+    
+    # Fetch the most recent nutrition logs across ALL users
+    query = """
+        SELECT n.NutritionLogID, n.Date, n.Calorie_intake, n.Macros, u.Name, u.UserID
+        FROM NutritionLog n
+        JOIN Records r ON n.NutritionLogID = r.NutritionLogID
+        JOIN User u ON r.UserID = u.UserID
+        ORDER BY n.Date DESC
+        LIMIT 50
+    """
+    cursor.execute(query)
+    recent_logs = cursor.fetchall()
+    
     cursor.close()
     conn.close()
-
-    return render_template("nutrition.html", logs=logs)
+    return render_template('nutrition.html', logs=recent_logs)
 
 @app.route("/nutrition/<int:user_id>")
 def nutrition_user(user_id):
@@ -567,7 +665,13 @@ def create_workout():
     users = cursor.fetchall()
 
     # Load exercises from Training_Session
-    cursor.execute("SELECT ExerciseID, Exercise_Name FROM Training_Session")
+    # cursor.execute("SELECT ExerciseID, Exercise_Name FROM Training_Session")
+    cursor.execute("""
+        SELECT DISTINCT ExerciseID, Exercise_Name
+        FROM Training_Session
+        WHERE Exercise_Name IS NOT NULL
+    """)
+
     exercises = cursor.fetchall()
 
     if request.method == "POST":
@@ -580,48 +684,94 @@ def create_workout():
         reps_list = request.form.getlist("reps")
         load_list = request.form.getlist("load")
 
-        cursor2 = conn.cursor()
+        # Validate that all lists have the same length
+        if not (len(exercise_ids) == len(sets_list) == len(reps_list) == len(load_list)):
+            cursor.close()
+            conn.close()
+            return "Error: Mismatched form data lengths", 400
 
-        # ---------------------------------------------------------
-        # 1. Generate a new WorkoutID (virtual grouping ID)
-        # ---------------------------------------------------------
-        cursor2.execute("SELECT IFNULL(MAX(WorkoutID), 0) + 1 FROM Includes")
-        workout_id = cursor2.fetchone()[0]
+        # Validate that we have at least one exercise
+        if len(exercise_ids) == 0:
+            cursor.close()
+            conn.close()
+            return "Error: No exercises selected", 400
 
-        # ---------------------------------------------------------
-        # 2. Insert each exercise as a PerformanceLog row
-        # ---------------------------------------------------------
-        for i in range(len(exercise_ids)):
+        cursor2 = conn.cursor(dictionary=True)
 
-            cursor2.execute("""
-                INSERT INTO PerformanceLog (Date, Duration, Sets, Reps, `Load`)
-                VALUES (%s, %s, %s, %s, %s)
-            """, (date, duration, sets_list[i], reps_list[i], load_list[i]))
+        try:
+            # ---------------------------------------------------------
+            # 1. Generate a new WorkoutID (virtual grouping ID)
+            # ---------------------------------------------------------
+            # Use a more robust approach to avoid race conditions
+            cursor2.execute("SELECT IFNULL(MAX(WorkoutID), 0) + 1 FROM (SELECT WorkoutID FROM Includes UNION SELECT WorkoutID FROM Perform) AS all_workouts")
 
-            log_id = cursor2.lastrowid
+            workout_id = list(cursor2.fetchone().values())[0]
+
 
             # ---------------------------------------------------------
-            # 3. Link LogID → WorkoutID + ExerciseID in Includes
+            # 2. Insert each exercise as a PerformanceLog row
             # ---------------------------------------------------------
-            cursor2.execute("""
-                INSERT INTO Includes (LogID, WorkoutID, ExerciseID)
-                VALUES (%s, %s, %s)
-            """, (log_id, workout_id, exercise_ids[i]))
+            for i in range(len(exercise_ids)):
+                sets = int(sets_list[i])
+                reps = int(reps_list[i])
+                load = float(load_list[i])
 
-            # ---------------------------------------------------------
-            # 4. Link WorkoutID + ExerciseID → UserID in Perform
-            # ---------------------------------------------------------
-            cursor2.execute("""
-                INSERT INTO Perform (WorkoutID, ExerciseID, UserID)
-                VALUES (%s, %s, %s)
-            """, (workout_id, exercise_ids[i], user_id))
+                # Insert PerformanceLog
+                cursor2.execute("""
+                    INSERT INTO PerformanceLog (Date, Duration, Sets, Reps, `Load`)
+                    VALUES (%s, %s, %s, %s, %s)
+                """, (date, duration, sets, reps, load))
 
-        conn.commit()
-        cursor2.close()
-        cursor.close()
-        conn.close()
+                log_id = cursor2.lastrowid
 
-        return redirect(url_for("workouts"))
+                # STEP 1 — fetch exercise metadata
+                cursor2.execute("""
+                    SELECT Exercise_Name, Category, Equipment, Target_Goal
+                    FROM Training_Session
+                    WHERE ExerciseID = %s
+                    ORDER BY WorkoutID ASC
+                    LIMIT 1
+                """, (exercise_ids[i],))
+                exercise_meta = cursor2.fetchone()
+
+                # STEP 2 — insert full Training_Session row
+                cursor2.execute("""
+                    INSERT INTO Training_Session (WorkoutID, ExerciseID, Exercise_Name, Category, Equipment, Target_Goal)
+                    VALUES (%s, %s, %s, %s, %s, %s)
+                """, (
+                    workout_id,
+                    exercise_ids[i],
+                    exercise_meta["Exercise_Name"],
+                    exercise_meta["Category"],
+                    exercise_meta["Equipment"],
+                    exercise_meta["Target_Goal"]
+                ))
+
+                # Insert into Includes
+                cursor2.execute("""
+                    INSERT INTO Includes (LogID, WorkoutID, ExerciseID)
+                    VALUES (%s, %s, %s)
+                """, (log_id, workout_id, exercise_ids[i]))
+
+                # Insert into Perform
+                cursor2.execute("""
+                    INSERT INTO Perform (WorkoutID, ExerciseID, UserID)
+                    VALUES (%s, %s, %s)
+                """, (workout_id, exercise_ids[i], user_id))
+
+            conn.commit()
+            cursor2.close()
+            cursor.close()
+            conn.close()
+
+            return redirect(url_for("workouts"))
+
+        except Exception as e:
+            conn.rollback()
+            cursor2.close()
+            cursor.close()
+            conn.close()
+            return f"Error creating workout: {str(e)}", 500
 
     cursor.close()
     conn.close()

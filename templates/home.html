@@ -1,0 +1,150 @@
+{% extends "base.html" %}
+{% block content %}
+
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+
+<style>
+    :root {
+        --primary: #4e73df;
+        --success: #1cc88a;
+        --dark-bg: #f8f9fc;
+        --card-shadow: 0 4px 20px 0 rgba(0, 0, 0, 0.05);
+    }
+
+    body { font-family: 'Inter', sans-serif; background-color: var(--dark-bg); }
+    
+    .card { 
+        border: 1px solid #e3e6f0; 
+        border-radius: 16px; 
+        box-shadow: var(--card-shadow); 
+        transition: all 0.3s ease;
+        background: white;
+        margin-bottom: 20px;
+    }
+    
+    .card:hover { transform: translateY(-5px); box-shadow: 0 8px 30px rgba(0,0,0,0.1); }
+
+    .card-h { 
+        font-size: 0.75rem; 
+        font-weight: 700; 
+        color: #858796; 
+        text-transform: uppercase; 
+        letter-spacing: 0.1rem; 
+        margin-bottom: 15px;
+    }
+
+    .kpi-card { border-left: 5px solid var(--primary); padding: 20px; }
+    .kpi-card h3 { font-size: 1.8rem; font-weight: 700; margin: 0; color: #2d3748; }
+
+    .badge-elite { 
+        background: linear-gradient(45deg, #4e73df, #224abe); 
+        color: white; 
+        border-radius: 6px; 
+        padding: 5px 10px; 
+        font-size: 0.7rem;
+    }
+
+    .recent-log-item {
+        background: #f1f4ff;
+        border-radius: 10px;
+        padding: 10px 15px;
+        font-size: 0.85rem;
+        color: #4e73df;
+        font-weight: 600;
+        text-align: center;
+    }
+</style>
+
+<div class="container-fluid pb-4">
+    <div class="d-flex align-items-center justify-content-between py-3">
+        <h2 class="h4 mb-0 text-gray-700 font-weight-bold">Performance Overview</h2>
+        <span class="text-muted small">April 2026</span>
+    </div>
+
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card kpi-card">
+                <div class="card-h">Active Users</div>
+                <h3>{{ total_users }}</h3>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card kpi-card" style="border-left-color: #1cc88a;">
+                <div class="card-h">Sessions</div>
+                <h3>{{ total_workouts }}</h3>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card kpi-card" style="border-left-color: #36b9cc;">
+                <div class="card-h">Exercises</div>
+                <h3>{{ total_exercises }}</h3>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card kpi-card" style="border-left-color: #f6c23e;">
+                <div class="card-h">Nutrition</div>
+                <h3>{{ total_nutrition }}</h3>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card p-4">
+                <div class="card-h">Activity Trend</div>
+                <div style="position: relative; height: 320px;">
+                    <canvas id="workoutsChart" 
+                        data-weeks='{{ workouts_per_week | map(attribute="week") | list | tojson | safe }}'
+                        data-counts='{{ workouts_per_week | map(attribute="count") | list | tojson | safe }}'>
+                    </canvas>
+                </div>
+            </div>
+
+            <div class="row mt-2">
+                {% for a in recent_activity[:3] %}
+                <div class="col-md-4">
+                    <div class="recent-log-item shadow-sm">
+                        {{ a.Name }} <span style="font-weight:400; opacity:0.8;">logged {{ a.Date }}</span>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <div class="card p-4 mb-4">
+                <div class="card-h">Muscle Groups</div>
+                <div style="position: relative; height: 200px;">
+                    <canvas id="categoryChart"
+                        data-labels='{{ category_distribution | map(attribute="Category") | list | tojson | safe }}'
+                        data-counts='{{ category_distribution | map(attribute="count") | list | tojson | safe }}'>
+                    </canvas>
+                </div>
+            </div>
+
+            <div class="card p-4">
+                <div class="card-h">Leaderboard</div>
+                <div class="table-responsive">
+                    <table class="table table-borderless align-middle mb-0">
+                        <tbody>
+                            {% for u in top_users[:4] %}
+                            <tr>
+                                <td class="font-weight-bold" style="color: #2d3748;">{{ u.Name }}</td>
+                                <td class="text-muted small">{{ u.workout_count }} sessions</td>
+                                <td class="text-end"><span class="badge-elite">ELITE</span></td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="{{ url_for('static', filename='js/home_charts.js') }}"></script>
+{% endblock %}

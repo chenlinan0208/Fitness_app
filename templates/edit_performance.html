@@ -47,10 +47,10 @@
 function updateVolume() {
   const s = parseFloat(document.getElementById("sets").value) || 0;
   const r = parseFloat(document.getElementById("reps").value) || 0;
-  const w = parseFloat(document.getElementById("weight").value) || 0;
-  document.getElementById("volume_display").value = s * r * w;
+  const l = parseFloat(document.getElementById("load").value) || 0;
+  document.getElementById("volume_display").value = s * r * l;
 }
-["sets","reps","weight"].forEach(id => {
+["sets","reps","load"].forEach(id => {
   const el = document.getElementById(id);
   if (el) el.addEventListener("input", updateVolume);
 });

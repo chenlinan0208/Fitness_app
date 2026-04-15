@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="container mt-4" style="max-width: 1000px;">
+    
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="mb-0">Global Nutrition Feed</h2>
+            <small class="text-muted">Recent logs across all users</small>
+        </div>
+        <a href="{{ url_for('users') }}" class="btn btn-outline-primary">Select User to Add Log</a>
+    </div>
+
+    {% if logs %}
+    <div class="table-responsive shadow-sm rounded bg-white p-3">
+        <table class="table table-hover align-middle">
+            <thead class="table-light">
+                <tr>
+                    <th>User Name</th>
+                    <th>Date</th>
+                    <th>Calorie Intake (kcal)</th>
+                    <th>Macros</th>
+                    <th class="text-end">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for log in logs %}
+                <tr>
+                    <td class="fw-bold" style="color: #4e73df;">{{ log.Name }}</td>
+                    <td>{{ log.Date }}</td>
+                    <td class="fw-bold text-success">{{ log.Calorie_intake }}</td>
+                    <td class="text-muted">{{ log.Macros }}</td>
+                    <td class="text-end">
+                        <a href="{{ url_for('nutrition_user', user_id=log.UserID) }}" class="btn btn-sm btn-primary">
+                            View {{ log.Name }}'s Logs
+                        </a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="alert alert-info text-center mt-4">
+        <i class="bi bi-info-circle me-2"></i> No nutrition logs found in the system yet. Head over to the Users tab to start logging!
+    </div>
+    {% endif %}
+
+</div>
+
+{% endblock %}

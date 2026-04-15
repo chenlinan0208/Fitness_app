@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container mt-4" style="max-width: 600px;">
+  <h2 class="mb-4">Edit Nutrition Entry</h2>
+
+  <form method="POST">
+    <div class="mb-3">
+      <label class="form-label">Date</label>
+      <input type="date" name="date" class="form-control" value="{{ log.Date }}" required>
+    </div>
+
+    <div class="mb-3">
+      <label class="form-label">Calorie Intake (kcal)</label>
+      <input type="number" name="calorie_intake" class="form-control"
+             value="{{ log.Calorie_intake }}" min="0" required>
+    </div>
+
+    <div class="mb-3">
+      <label class="form-label">Macros</label>
+      <input type="text" name="macros" class="form-control"
+             value="{{ log.Macros }}"
+             placeholder="e.g. Protein: 150g, Carbs: 200g, Fat: 60g">
+    </div>
+
+    <div class="d-flex justify-content-between mt-4">
+      <a href="{{ url_for('nutrition_user', user_id=user_id) }}" class="btn btn-secondary">Cancel</a>
+      <button type="submit" class="btn btn-primary">Save Changes</button>
+    </div>
+  </form>
+</div>
+{% endblock %}
